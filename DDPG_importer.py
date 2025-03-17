@@ -33,15 +33,12 @@ class Actor(nn.Module):
         # The max value for action
         self.max_action_value = max_action
         self.fc1 = nn.Linear(n_states, n_hiddens)
-        self.fc2 = nn.Linear(n_hiddens, n_hiddens)
-        self.fc3 = nn.Linear(n_hiddens, n_actions)
+        self.fc2 = nn.Linear(n_hiddens, n_actions)
         
     def forward(self, x):
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
         x = torch.tanh(x)  
         x = x * self.max_action_value  # 缩放到 [-max_action, max_action]
         return x
@@ -51,23 +48,15 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(self, n_states, n_hiddens, n_actions):
         super(Critic, self).__init__() 
-        
-        print("n_states: ",n_states)
-        print("n_actions: ",n_actions)
         self.fc1 = nn.Linear(n_states + n_actions, n_hiddens)
-        self.fc2 = nn.Linear(n_hiddens, n_hiddens)
-        self.fc3 = nn.Linear(n_hiddens, 1)
+        self.fc2 = nn.Linear(n_hiddens, 1)
 
     def forward(self, x, a):
         # Combind states and actions togethet
         cat = torch.cat([x, a], dim=1)
-        print("cat: ",cat)
         x = self.fc1(cat)
         x = F.relu(x)
         x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
-        print("x: ",x)
         return x
     
     
@@ -100,7 +89,7 @@ class DDPG():
     def select_action(self, state):
         state = torch.FloatTensor(state).view(1,-1).to(self.device)
         action = self.actor(state).item()
-        return action + np.random.normal(0, self.sigma, size=self.states_size)
+        return action + np.random.normal(0, self.sigma, size=self.actions_size)
     
     def update(self, actor_net, actor_target):
         for target_param, param in zip(actor_target.parameters(), actor_net.parameters()):
@@ -119,7 +108,6 @@ class DDPG():
         target_action_q_values = self.critic_target(batch_states, target_actions)
         target_q_values = batch_rewards + self.gamma * (1 - batch_dones) * target_action_q_values
         
-        print("breakpoint")
         current_q_values = self.critic(batch_states, batch_actions)
         
         critic_loss = self.loss(current_q_values, target_q_values)
