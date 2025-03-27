@@ -104,15 +104,19 @@ class DDPG():
             "Episode": self.steps
         })
         
+    
+    def OU_noise(self, x, mu, theta, sigma):
+        return theta * (mu - x) + sigma * np.random.randn(1)
+
     def select_action(self, state):
         state = torch.FloatTensor(state).view(1,-1).to(self.device)
         action = self.actor(state).item()
-        action = action + self.sigma * np.random.randn(self.actions_size)
+        action = action + self.OU_noise(action, 0, 0.15, self.sigma)
         return action
 
     
     def update(self, actor_net, actor_target):
-        #self.sigma = max(self.final_sigma, self.init_sigma - 1e-3 * self.steps)
+        self.sigma = max(self.final_sigma, self.init_sigma - 5e-6 * self.steps)
         for target_param, param in zip(actor_target.parameters(), actor_net.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
             
@@ -136,7 +140,7 @@ class DDPG():
         critic_loss.backward()
         self.critic_optimizer.step()
         
-        actor_loss = -self.critic(batch_states, self.actor(batch_states)).mean()
+        actor_loss = self.critic(batch_states, self.actor(batch_states)).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()

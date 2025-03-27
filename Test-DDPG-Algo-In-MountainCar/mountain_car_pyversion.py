@@ -11,13 +11,12 @@ from matplotlib.animation import FuncAnimation
 wandb.init(
     project="mountain_car_algo_test",  # 项目名称
     config={                     # 记录超参数
-        "init_sigma":0.5,
-        "final_sigma":0.05,
-        "actor_lr":1e-4,
-        "critic_lr":1e-3,
+        "init_sigma":0.8,
+        "actor_lr":1e-5,
+        "critic_lr":1e-4,
         "tau":0.001,
-        "gamma":0.95,
-        "batch_size":128}
+        "gamma":0.99,
+        "batch_size":256}
 )
 
 # Main body
@@ -32,12 +31,12 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 agent = DDPG(states_size=state_size,
              actions_size=action_size,
              max_action=max_action,
-             batch_size=128,
-             init_sigma=0.5,
-             final_sigma=0.1,
-             actor_lr=1e-4,
-             critic_lr=1e-3,
-             tau=0.005,
+             batch_size=256,
+             init_sigma=0.9,
+             final_sigma=0.5,
+             actor_lr=1e-5,
+             critic_lr=1e-4,
+             tau=0.001,
              gamma=0.99,
              device=device)  # Ensure the device is specified correctly
 replay = ReplayBuffer(capacity=100000)
@@ -53,7 +52,7 @@ for episode in range(200):
     step_count = 0
     while not done:
         step_count += 1
-        if step_count > 999:
+        if step_count > 2000:
             print("Break Training")
             break
         action = agent.select_action(state)
@@ -62,7 +61,7 @@ for episode in range(200):
         replay.push(state, action, reward, next_state, done)
         state = next_state
         episode_return += reward
-        if replay.size() > 1000:
+        if replay.size() > 10000:
             agent.train(replay)
     all_returns.append(episode_return)
     mean_return = np.mean(all_returns)
